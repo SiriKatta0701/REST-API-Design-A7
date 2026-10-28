@@ -1,0 +1,127 @@
+openapi: 3.0.3
+info:
+  title: Movie Ticket Seat Selection and Reservation API
+  version: 1.0.0
+  description: >
+    This API is for the seat reservation part of buying movie tickets online.
+    A customer can look at the seats for a specific showtime, choose the seats
+    they want, and cancel a reservation if they no longer need it. The goal is
+    to keep track of which seats are still available before tickets are purchased.
+
+servers:
+  - url: https://movie-tickets.example.com/api/v1
+    description: Example movie theater server for viewing and reserving seats
+
+paths:
+  /showtimes/{showtimeId}/seats:
+    get:
+      summary: View the available seats for a selected movie showtime
+      parameters:
+        - name: showtimeId
+          in: path
+          required: true
+          description: The showtime the customer chose when looking for seats.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The selected showtime was found and the available seats are shown.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  showtimeId:
+                    type: string
+                  seats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        seatNumber:
+                          type: string
+                        available:
+                          type: boolean
+              example:
+                showtimeId: SCREEN2-2030-1030
+                seats:
+                  - seatNumber: J11
+                    available: true
+                  - seatNumber: J12
+                    available: false
+                  - seatNumber: J13
+                    available: true
+        '404':
+          description: No showtime was found with what they searched.
+
+  /seat-reservations:
+    post:
+      summary: Reserve the seats a customer selected for the show time they chose
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - showtimeId
+                - selectedSeats
+                - customerId
+              properties:
+                showtimeId:
+                  type: string
+                selectedSeats:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                customerId:
+                  type: string
+            example:
+              showtimeId: SCREEN2-2030-1030
+              selectedSeats:
+                - J11
+                - J13
+              customerId: GUEST-4827
+      responses:
+        '201':
+          description: The selected seats were reserved and a booking ID was created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookingId:
+                    type: string
+                  status:
+                    type: string
+                  selectedSeats:
+                    type: array
+                    items:
+                      type: string
+              example:
+                bookingId: TIX-8F24K
+                status: reserved
+                selectedSeats:
+                  - J11
+                  - J13
+        '409':
+          description: One or more selected seats for the showtime are no longer available.
+
+  /seat-reservations/{bookingId}:
+    delete:
+      summary: Cancel a seat reservation
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          description: The booking ID the customer received when reserving their seats.
+          schema:
+            type: string
+      responses:
+        '204':
+          description: The reservation was canceled and the seats are available again.
+        '404':
+          description: No reservation was found with the given ID.
+        '409':
+          description: The reservation cannot be canceled in its current status.
